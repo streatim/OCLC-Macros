@@ -75,10 +75,6 @@ Sub VariableFieldChanges()
     Set CS = CreateObject("Connex.Client")
     'Set the 049
     CS.SetField 1, "049  EYDX [WEB]"
-    'Add a title from the Homepage if not already there.
-    Dim x as Integer
-    Dim sField as String    
-    x = 1
     'Loop through 500 Fields to see if any of them exist or include a "Title from homepage" string in their field.
     IF (CheckVariableField("500", "Title from homepage") = "False") THEN
         Dim msg500 as String
