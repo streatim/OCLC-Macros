@@ -152,8 +152,15 @@ Sub VariableFieldChanges()
             END IF
         END IF
     END IF
+    Dim loadTable as String
+    loadTable = "b"
+    'If this is a free resource from Ann Arbor, we need to add a 960 and change the loadTable.
+    IF (YNBox("From Ann Arbor", "Is this a free resource from Ann Arbor?") = "True") THEN
+        CS.AddField 1, "960  *recs=bio;ins=mtist;ßnFree through UM-AA" 
+        loadTable = "bio"
+    END IF
     'Finally, add in the 949 Field for export.
-    CS.AddField x, "949  *recs=b;bn=mweb;b2=9;b3=t;ins=mtist;i=/loc=mweb/sta=w/ty=11/i2=-;" 
+    CS.AddField 1, "949  *recs="&cStr(loadTable)&";bn=mweb;b2=9;b3=t;ins=mtist;i=/loc=mweb/sta=w/ty=11/i2=-;" 
 End Sub
 
 Function AZList()
