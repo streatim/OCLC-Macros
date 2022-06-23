@@ -137,6 +137,7 @@ Sub VariableFieldChanges()
                         IF(urlToProxy <> "False") THEN
                             CS.DeleteField "856", x
                             CS.AddField x, "85640ßu https://library.umd.umich.edu/verify/fwd.php?"&cStr(urlToProxy)&" ßz Access Web version" 
+                            x = x+1
                         ELSE
                             CS.DeleteField "856", x
                         END IF
