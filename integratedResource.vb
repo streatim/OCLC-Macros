@@ -1,5 +1,5 @@
 'MacroName:intres
-'MacroDescription:Create an Integrated Resource
+'MacroDescription:Create an Integrated Resource. No longer drafted.
 
 Declare Sub FixedFieldChanges()
 Declare Sub VariableFieldChanges()
