@@ -1,25 +1,11 @@
 'MacroName:Bravender
-'MacroDescription:Bravender
+'MacroDescription:Adds Patricia Bravender donation statement.
 
 Sub Main
 
    Dim CS As Object
    Set CS = CreateObject("Connex.Client")
 
-   CS.AddFieldLine 2,""
-
-   CS.InsertText "599"
-
-   CS.InsertText " "
-
-   CS.InsertText " "
-
-   CS.InsertText "Donated by Patricia Bravendar"
-
-   CS.BackSpace
-
-   CS.BackSpace
-
-   CS.InsertText "er."
+   CS.AddField 1, "599 Donated by Patricia Bravender"
 
 End Sub
