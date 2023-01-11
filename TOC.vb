@@ -1,5 +1,5 @@
 'MacroName:TOC
-'MacroDescription:Table of contents
+'MacroDescription:Adds Table of Contents statement where the cursor is.
 
 Sub Main
 
