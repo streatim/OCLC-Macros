@@ -1,59 +1,14 @@
 'MacroName:Subjects
-'MacroDescription:Subject headings
+'MacroDescription:Adds subject headings to Nancy Drew books.
 
 Sub Main
 
    Dim CS As Object
    Set CS = CreateObject("Connex.Client")
 
-   CS.AddFieldLine 17,""
-
-   CS.InsertText "650"
-
-   CS.InsertText " "
-
-   CS.InsertText "0"
-
-   CS.InsertText "Detective and mystery storires"
-
-   CS.BackSpace
-
-   CS.BackSpace
-
-   CS.BackSpace
-
-   CS.BackSpace
-
-   CS.InsertText "ies."
-
-   CS.AddFieldLine 18,""
-
-   CS.InsertText "650"
-
-   CS.InsertText " "
-
-   CS.InsertText "0"
-
-   CS.InsertText "Drew, Nancy (Fictitious character) ßv Juvenile fiction."
-
-   CS.AddFieldLine 19,""
-
-   CS.InsertText "650"
-
-   CS.InsertText " "
-
-   CS.InsertText "0"
-
-   CS.InsertText "Women detectives ßv Juvenile fiction."
-
-   CS.AddFieldLine 20,""
-
-   CS.InsertText "650"
-
-   CS.InsertText " "
-
-   CS.InsertText "0"
-
-   CS.InsertText "Adventure stories ßv Juvenile fiction."
+   CS.AddField 1, "650 0Detective and mystery stories."
+   CS.AddField 1, "650 0Drew, Nancy (Fictitious character) ßv Juvenile fiction."
+   CS.AddField 1, "650 0Women detectives ßv Juvenile fiction."
+   CS.AddField 1, "650 0Adventure stories ßv Juvenile fiction."
 
 End Sub
