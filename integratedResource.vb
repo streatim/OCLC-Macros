@@ -164,18 +164,13 @@ Sub VariableFieldChanges()
 End Sub
 
 Function AZList()
-    Begin Dialog DBIDPrompt 130, 60, "Database ID #"
-      Text 4, 4, 120, 12, "Please Type in the Database ID #:"
-      TextBox 4, 20, 120, 12, .DBNum
-      OKButton 4, 34, 40, 20
-    End Dialog
-    Dim DBID AS DBIDPrompt
-    Dialog DBID  
-    IF DBID.DBNum = "" THEN
+    Dim DBID as String
+    DBID = inputbox$("Please Type in the Database ID #:","Database ID#", "", 130, 60)
+    IF DBID = "" THEN
       MsgBox "Please put a value into the text box."
       OutputValue = AZList()
     ELSE
-      OutputValue = DBID.DBNum
+      OutputValue = DBID
     END IF
     AZList = OutputValue
 End Function
