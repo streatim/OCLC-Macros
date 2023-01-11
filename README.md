@@ -11,3 +11,4 @@ This collection includes the following macros:
 ## Removed Macros
 This collection used to include the following Macros:
 - **LPA**: A Macro that set the cursor in the 19th position of the 8th row.
+- **rpkfgift**: A Macro that did nothing.
