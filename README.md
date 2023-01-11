@@ -7,3 +7,7 @@ This collection includes the following macros:
 - **atab**: A macro that adds a 949 to make use of the subject authority load table.
 - **Bravender**: A macro that adds a donation statement for Patricia Bravender items.
 - **integratedResource**: A macro for copy-cataloging databases. Updates fixed fields and adds appropriate variable fields, as necessary. If the resource is free from Ann Arbor, sets up an insertion for an order record using the "Free" template. 
+
+## Removed Macros
+This collection used to include the following Macros:
+- **LPA**: A Macro that set the cursor in the 19th position of the 8th row.
