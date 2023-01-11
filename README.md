@@ -1,5 +1,5 @@
 # OCLC-Macros
-A collection of Macros written in OML written for the Mardigian Library.
+A collection of Macros written in OML written for the Mardigian Library. OML is an OCLC expansion of Softbridge Basic Language (SBL).
 
 ## Included Macros
 This collection includes the following macros:
