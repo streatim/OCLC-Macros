@@ -2,17 +2,30 @@
 'MacroDescription:Create an Integrated 949 Function.
 
 'Overarching Functions with customizable values
-Declare Sub AllFormats() 'user is set here.
 Declare Function MacroPick() 'Order of Macros in dropdown set here.
+
 'Macro Functions
+Declare Sub Run949Macro(user, selectedMacro)
 Declare Function Default949(user, callNum, formatType, formatCode)
+Declare Function Multi949(user, callNum, formatType, formatCode)
 Declare Function Overlay949(user, callNum, formatType, formatCode)
 Declare Function Volume949(user, callNum, formatType, formatCode)
-Declare Function Multi949(user, callNum, formatType, formatCode)
+Declare Sub RunIntegratedResource(user)
+
+'Specific Sub/Macros for Fixed and Variable Field Changes
+Declare Sub IntegratedFixedFieldChanges()
+Declare Function IntegratedVariableFieldChanges(user)
+
+'Subs with Acceptable values (for list commands)
+Declare Sub AllFormats()
+Declare Sub AllICodes()
+Declare Sub AllIStatus()
 
 'Action Functions
+Declare Function CheckVariableField(marc, checkString)
 Declare Function GetBarcode()
-Declare Function GetVolume()
+Declare Function GetCopyInfo()
+Declare Function GetDBID()
 Declare Function GetFormatCode(formatType, formatCode)
 Declare Function GetFormatInfo(jamesBond, marcType, marcBlvl, returnValue)
 Declare Function GetICode()
@@ -20,10 +33,13 @@ Declare Function GetIStatus()
 Declare Function GetIType()
 Declare Function GetLocation(callNum)
 Declare Function GetOverlayBNum()
+Declare Function GetVolume()
+Declare Function ProxyCheck(url)
 
 'Prompt Box Functions
 Declare Function DropdownBox(valueArray$(), title, qtext)
-Declare Function YNBox(title, qtext)
+Declare Function TextBox(qtext, title, optional defaultText)
+Declare Function YNBox(qtext, title)
 
 'Main Function. Sets username variable and handles anything that requires writing or reading the record.
 Sub Main
@@ -31,16 +47,41 @@ Sub Main
     Dim user as String
     user = "mtist"    
     
+    'Determine which Macro we are running.
+    Dim selectedMacro as String
+    selectedMacro = MacroPick()
+
+    'Check the selected Macro, then run the Macro based on that.
+    Dim outputLine as String
+    IF selectedMacro = "Default 949" THEN Call Run949Macro(user, selectedMacro)
+    IF selectedMacro = "Overlay 949" THEN Call Run949Macro(user, selectedMacro)
+    IF selectedMacro = "Volumes 949" THEN Call Run949Macro(user, selectedMacro)
+    IF selectedMacro = "Multicopy 949" THEN Call Run949Macro(user, selectedMacro)
+    IF selectedMacro = "Integrated Resource" THEN Call RunIntegratedResource(user)
+
+End Sub
+
+'List all Macros in a dropdown and return the selected result.
+Function MacroPick()
+    Dim MacroValues$(4)
+    MacroValues$(0) = "Default 949"
+    MacroValues$(1) = "Overlay 949"
+    MacroValues$(2) = "Volumes 949"
+    MacroValues$(3) = "Multicopy 949"
+    MacroValues$(4) = "Integrated Resource"
+
+    MacroPick = DropdownBox(MacroValues$(), "Select a Macro", "Select a Macro")
+End Function
+
+'***MACRO FUNCTIONS/SUBS***
+
+Sub Run949Macro(user, selectedMacro)
     'Set Connexion Client Variable and confirm we are logged in.
     Dim CS As Object
     Set CS = CreateObject("Connex.Client")
     IF CS.IsOnline = False Then
         CS.Logon "","",""
     End If
-
-    'Determine which Macro we are running.
-    Dim selectedMacro as String
-    selectedMacro = MacroPick()
 
     'Get the Type, blvl, and 007 Field.
     Dim jamesBond as String
@@ -49,34 +90,23 @@ Sub Main
     CS.GetField "007", 1, jamesBond
     CS.GetFixedField "Type", marcType
     CS.GetFixedField "blvl", marcBlvl
+
     'Determine default format Types and formatCodes based on the gathered values.
     Dim formatType as String
     Dim formatCode as String
     formatType = GetFormatInfo(jamesBond, marcType, marcBlvl, "type")
     formatCode = GetFormatInfo(jamesBond, marcType, marcBlvl, "code")
+
     'Get Call Number, if it exists.
     Dim callNum as String
     CS.GetField "050", 1, callNum
 
-    'Check the selected Macro, then set the output line based on that.
-    Dim outputLine as String
     IF selectedMacro = "Default 949" THEN outputLine = Default949(user, callNum, formatType, formatCode)
     IF selectedMacro = "Overlay 949" THEN outputLine = Overlay949(user, callNum, formatType, formatCode)
     IF selectedMacro = "Volumes 949" THEN outputLine = Volume949(user, callNum, formatType, formatCode)
-    IF selectedMacro = "Multi 949" THEN outputLine = Multi949(user, callNum, formatType, formatCode)
+    IF selectedMacro = "Multicopy 949" THEN outputLine = Multi949(user, callNum, formatType, formatCode)
     CS.AddField 1, outputLine
 End Sub
-
-'List all Macros in a dropdown and return the selected result.
-Function MacroPick()
-    Dim MacroValues$(3)
-    MacroValues$(0) = "Default 949"
-    MacroValues$(1) = "Overlay 949"
-    MacroValues$(2) = "Volumes 949"
-    MacroValues$(3) = "Multi 949"
-
-    MacroPick = DropdownBox(MacroValues$(), "Select a Macro", "Select a Macro")
-End Function
 
 'Default 949 Process
 Function Default949(user, callNum, formatType, formatCode)
@@ -118,7 +148,7 @@ Function Multi949(user, callNum, formatType, formatCode)
         'Get IType
         itemInfo$(i, 2) = getIType()
         'Get Copy Information
-        itemInfo$(i, 3) = GetCopyInfo
+        itemInfo$(i, 3) = GetCopyInfo()
     Next i
     'Get Format (b2) Code
     Dim b2Code as String
@@ -198,6 +228,171 @@ Function Volume949(user, callNum, formatType, formatCode)
     Volume949 = outputString
 End Function
 
+'Integrated Resource Process
+Sub RunIntegratedResource(user)
+    'Set variables.
+    Dim CS As Object
+    Dim blvlCheck as String
+    blvlCheck = "bis"
+    'Set the CS object for Connexion macros. Make sure they're logged in.
+    Set CS = CreateObject("Connex.Client")
+    IF CS.IsOnline = False Then
+        CS.Logon "","",""
+    End If
+
+    'At present I don't know how to confirm the record type. I am going to backend it by checking Type and BLvl.
+    CS.GetFixedField "Type", typeField
+    CS.GetFixedField "BLvl", blvlField
+    IF (typeField = "a") AND (inStr(blvlCheck, blvlField)>0) THEN 
+        MsgBox "This is should already be a Continuing Resource."
+    ELSE
+        Call IntegratedFixedFieldChanges()
+    END IF 
+
+    Dim outputString as String
+    outputString = IntegratedVariableFieldChanges(user)
+    CS.AddField 1, outputString
+End Sub
+
+
+'***Macro Subs/Actions***
+
+'Fixed Field Changes for Macro: integratedResource()
+Sub IntegratedFixedFieldChanges()
+    Dim CS as Object
+    Set CS = CreateObject("Connex.Client")
+    'Set the format type to Continuing Resource.
+    CS.ChangeRecordType 2
+
+    'Set the type to A and Blvl to i. (that's the default setting)
+    CS.SetFixedField "Type", "a"
+    CS.SetFixedField "BLvl", "i"
+
+    'Set S/L to 2 and Form to o. Blank out Orig.
+    CS.SetFixedField "S/L", "2"
+    CS.SetFixedField "Form", "o"
+    CS.SetFixedField "Orig", " "
+
+    'SrTp can be either d or w, defaulting to d.
+    Dim SrTpField as String
+    Dim SrTpCheck as String
+    SrTpCheck = "dw"
+    CS.GetFixedField "SrTp", SrTpField
+    IF inStr(SrTpCheck, SrTpField) = 0 THEN
+        CS.SetFixedField "SrTp", "d"
+    END IF
+
+    'Freq and Regl need to agree, so we default to 'u' for both.
+    CS.SetFixedField "Freq", "u"
+    CS.SetFixedField "Regl", "u"
+
+    'DtSt can be 'c', 'd', or 'u'. We default to 'u' locally (though 'c' is the technical default)
+    Dim DtStField as String
+    Dim DtStCheck as String
+    DtStCheck = "cdu"
+    CS.GetFixedField "DtSt", DtStField
+    IF inStr(DtStCheck, DtStField) = 0 THEN
+        CS.SetFixedField "DtSt", "u"
+        ' "," is the second Date field in Dates.
+        CS.SetFixedField ",", "uuuu"
+    END IF 
+End Sub
+
+'Variable Field Changes for Macro: integratedResource()
+Function IntegratedVariableFieldChanges(user) 
+    Dim CS as Object
+    Set CS = CreateObject("Connex.Client")
+    Dim publicDB as String
+    publicDB = "False"
+    'Set the 049
+    CS.SetField 1, "049  EYDX [WEB]"
+    'Loop through 500 Fields to see if any of them exist or include a "Title from homepage" string in their field.
+    IF (CheckVariableField("500", "Title from homepage") = "False") THEN
+        Dim msg500 as String
+        CS.AddField 1, "500  Title from homepage (viewed "&Format(Now, "MMMM d, yyyy")&")"
+    END IF
+    'Prompt to see if this is a restricted database; if so, add a 506.
+    IF (YNBox("Restricted Resource", "Is this a Restricted Resource?") = "True") THEN
+        CS.AddField 1, "506  Access restricted to University of Michigan-Dearborn affiliates."
+    ELSE 
+        publicDB = "True"
+    END IF
+    'Loop through the 538 fields and make sure there is a mode of access statement.
+    IF (CheckVariableField("538", "Mode of access") = "False") THEN
+        CS.AddField 1, "538  Mode of access: World Wide Web."
+    END IF
+    'Now to update the 856. Check first to see if it's an A-Z list entry.
+    IF (YNBox("In A-Z List", "Is this in the A-Z List?") = "True") THEN
+        'It is an A-Z List entry. Take in the  #, delete the 856 fields, and insert the correct 856.
+        Dim DBID As String
+        DBID = GetDBID()
+        'Confirm whether there are 856 fields or not.
+        bool$ = CS.GetField("856", 1, noVal$)
+        IF bool$ = "-1" THEN
+            'Loop and delete 856 4 0 fields.
+            Dim x as Integer
+            x = 1
+            
+            Do
+                CS.GetField "856", x, testVal$
+                IF (Left(testVal$, 5) = "85640") THEN
+                    CS.DeleteField "856", x
+                ELSE
+                    x = x+1
+                END IF
+                bool$ = CS.GetField("856", x, testVal$)
+            Loop While bool$ <> "0"
+        END IF
+        'Insert the correct 856.
+        CS.AddField 1, "85640ßu https://library.umd.umich.edu/verify/redirect.php?ID="&cStr(DBID)&" ßz Access Web version"
+    ELSE
+        'It is not an A-Z List entry. Check to see if it is a public database.
+        IF (publicDB = "False") THEN
+            'This is not a public database. Let us fuss with the 
+            'Cycle through the 856 4 0 fields until you hit a database URL you want to use and then put the forwarding script in front of it.
+            Dim DBURL As String
+            bool$ = CS.GetField("856", 1, noVal$)
+            IF bool$ = "-1" THEN
+                X = 1
+                Do
+                    CS.GetField "856", x, testString$
+                    IF (Left(testString$, 5) = "85640") THEN
+                        'Check to see if this is the 856 they want to use.
+                        Dim urlToProxy as String
+                        urlToProxy = proxyCheck(testString$)
+                        IF(urlToProxy <> "False") THEN
+                            CS.DeleteField "856", x
+                            CS.AddField x, "85640ßu https://library.umd.umich.edu/verify/fwd.php?"&cStr(urlToProxy)&" ßz Access Web version" 
+                            x = x+1
+                        ELSE
+                            CS.DeleteField "856", x
+                        END IF
+                    ELSE
+                        x = x+1
+                    END IF
+                    bool$ = CS.GetField(marc, x, testString$)
+                Loop While bool$ <> "0"    
+            ELSE
+                'There is not a preexisting URL. Just put the forwarding script in there with a blank value.
+                CS.AddField 1, "85640ßu https://library.umd.umich.edu/verify/fwd.php? ßz Access Web version"           
+            END IF
+        END IF
+    END IF
+    Dim loadTable as String
+    loadTable = "b"
+    'If this is a free resource from Ann Arbor, we need to add a 960 and change the loadTable.
+    IF (YNBox("From Ann Arbor", "Is this a free resource from Ann Arbor?") = "True") THEN
+        CS.AddField 1, "960  *recs=bio;ins="&cStr(user)&";ßnFree through UM-AA" 
+        loadTable = "bio"
+    END IF
+    'Pass back the remaining 949 to submit.
+    Dim outputLine as String
+    outputLine = "949  *recs="&cStr(loadTable)&";bn=mweb;b2=9;b3=t;ins="&cStr(user)&";i=/loc=mweb/sta=w/ty=11/i2=-;" 
+    IntegratedVariableFieldChanges = outputLine
+End Function
+
+'***Subs with Acceptable values (for list commands)***
+
 'Display a list of all format types
 Sub AllFormats()
     Dim formatList As String
@@ -227,10 +422,59 @@ Sub AllFormats()
     msgbox(formatList)
 End Sub
 
+'Display a List of all ICodes
+Sub AllICodes()
+    Dim ICodeList As String
+    Dim ICodes$(3)
+    ICodes(0)  = "-" & chr$(9) & "None"
+    ICodes(1)  = "a" & chr$(9) & "CONTENT ADDED"
+    ICodes(2)  = "b" & chr$(9) & "SUBJECT ADDED"
+    ICodes(3)  = "c" & chr$(9) & "NOTE/SUB ADDED"
+    For i = 0 to 3
+        ICodeList = ICodeList & ICodes(i) & chr$(10)
+    Next i
+    msgbox(ICodeList)
+End Sub
+
+Sub AllIStatus()
+    Dim IStatusList As String
+    Dim IStatuses$(1)
+    IStatuses(0)  = "-" & chr$(9) & "Available"
+    IStatuses(1)  = "p" & chr$(9) & "In Process"
+    For i = 0 to 1
+        IStatusList = IStatusList & IStatuses(i) & chr$(10)
+    Next i
+    msgbox(IStatusList)
+End Sub
+
+'***Action Functions***'
+
+'This function checks all instances of a variable MARC field to see if a string exists and lets the calling program know if it does or not.
+Function CheckVariableField(marc, checkString)
+    Dim CS as Object
+    Set CS = CreateObject("Connex.Client")
+
+    Dim x as Integer
+    x = 1
+    Dim sField as String
+    Dim exists as String
+    exists = "False"
+    Do
+        CS.GetField marc, x, sField
+        IF inStr(sField, checkString) > 0 THEN
+            exists = "True"
+            EXIT DO        
+        END IF
+        x = x+1
+        bool$ = CS.GetField(marc, x, sField)
+    Loop While bool$ <> "0"
+    CheckVariableField = exists
+End Function
+
 'Prompts the user to provide a barcode.
 Function GetBarcode()
     Dim barcodeNum as String
-    barcodeNum = InputBox$("Scan Barcode:", "Barcode")
+    barcodeNum = TextBox("Scan Barcode:", "Barcode")
     IF len(barcodeNum) <> 14 THEN
         msgbox("A 14 character barcode must be scanned")
         barcodeNum = GetBarcode()
@@ -241,14 +485,21 @@ End Function
 'Prompts the user to provide copy information.
 Function GetCopyInfo()
     Dim copyInput as String
-    copyInput = InputBox$("Copy:", "Copy Information")
+    copyInput = TextBox("Copy:", "Copy Information")
     GetCopyInfo = copyInput
+End Function
+
+'Prompts the user to provide a Database ID #.
+Function GetDBID()
+    Dim DBIDInput as String
+    DBIDInput = TextBox("Please Type in the Database ID #:","Database ID#")
+    GetDBID = DBIDInput
 End Function
 
 'Prompt User for Format Code using default values.
 Function GetFormatCode(formatType, formatCode)
     Dim formatInput as String
-    formatInput = InputBox$("Format (b2):"&chr$(10)&chr$(10)&"Suggested code: "& formatType & chr$(10) & chr$(10) & "Enter 'list' to see available codes.","949",formatCode)
+    formatInput = TextBox("Format (b2):"&chr$(10)&chr$(10)&"Suggested code: "& formatType & chr$(10) & chr$(10) & "Enter 'list' to see available codes.","949",formatCode)
     IF formatInput = "list" THEN 
         Call AllFormats()
         formatInput = GetFormatCode(formatType, formatCode)
@@ -314,7 +565,11 @@ End Function
 'This function prompts the user to provide an I Code.
 Function GetICode()
     Dim ICodeInput as String
-    ICodeInput = InputBox$("Icode2:" & chr$(10) & chr$(10) & "Choose from:" & chr$(10) & "-    None" & chr$(10) & "a    CONTENT ADDED" & chr$(10) & "b    SUBJECT ADDED" & chr$(10)& "c    NOTE/SUB ADDED","ICode2","-")
+    ICodeInput = TextBox("Icode2:" & chr$(10) & chr$(10) & "Enter 'list' to see available codes.", "Icode2","-")
+    IF ICodeInput = "list" THEN
+        Call AllICodes()
+        ICodeInput = GetICode()
+    END IF
     IF len(ICodeInput) <> 1 THEN
         msgbox("ICode2 must be a single character value.")
         ICodeInput = GetICode()
@@ -325,7 +580,11 @@ End Function
 'This function prompts the user to provide an I Status Code.
 Function GetIStatus()
     Dim IStatusInput as String
-    IStatusInput = InputBox$("Item Status:" & chr$(10) & chr$(10) & "Choose from:" & chr$(10) & "-   Available" & chr$(10) & "p   In Process","IStatus","p")
+    IStatusInput = TextBox("Item Status:" & chr$(10) & chr$(10) & "Enter 'list' to see available codes.","IStatus","p")
+    IF IStatusInput = "list" THEN
+        Call AllIStatus() 
+        IStatusInput = GetIStatus()
+    END IF
     IF len(IStatusInput) <> 1 THEN
         msgbox("I Status Code must be a single character value.")
         IStatusInput = GetIStatus()
@@ -336,11 +595,7 @@ End Function
 'This function prompts the user to provide an Type Code value.
 Function GetIType()
     Dim iTypeInput as String
-    iTypeInput = InputBox$("Enter IType:", "IType", "0")
-    IF iTypeInput = "" THEN
-        msgBox("Input an IType value.")
-        iTypeInput = GetIType()
-    End If
+    iTypeInput = TextBox("Enter IType:", "IType", "0")
     GetIType = iTypeInput
 End Function
 
@@ -355,37 +610,79 @@ Function GetLocation(callNum)
         if asc(mid$(callNum,6,1))>=76 then callDefault="c4th"
     END IF
     'Prompt the user to correct the location, if necessary.
-    callLocation = InputBox$("Enter location:","Location",callDefault)
-    IF callLocation = "" THEN 
-        msgbox("Please provide a location.")
-        callLocation = GetLocation(callNum)
-    End If
-    getLocation = callLocation
+    callLocation = TextBox("Enter location:","Location",callDefault)
+    GetLocation = callLocation
 End Function
 
 'Prompts the user for an overlay bib number.
 Function GetOverlayBNum()
     Dim overlayBib as String
-    overlayBib = InputBox$("Enter a Bib record number to overlay. (.b is not necessary)", "Bib Overlay")
+    overlayBib = TextBox("Enter a Bib record number to overlay. (.b is not necessary)", "Bib Overlay")
     If len(overlayBib) = 8 THEN overlayBib = ".b"&overlayBib
     IF len(overlayBib) = 9 AND Left(overlayBib, 1) = "b" THEN overlayBib = "."&overlayBib
     IF len(overlayBib) <> 10 THEN
         msgBox("Please enter a valid bib record number")
-        overlayBib = getOverlayBNum()
+        overlayBib = GetOverlayBNum()
     END IF
-    getOverlayBNum = overlayBib
+    GetOverlayBNum = overlayBib
 End Function
 
 'Prompts the user for a volume.
 Function GetVolume()
     Dim VolumeInput as String
-    VolumeInput = InputBox$("Enter Volume:", "Volume")
-    IF VolumeInput = "" THEN
-        msgBox("Input an Volume Number.")
-        VolumeInput = GetIType()
-    End If
+    VolumeInput = TextBox("Enter Volume:", "Volume")
     GetVolume = VolumeInput
 End Function
+
+'Takes a URL and asks the user is they would like to add the library proxy to it.
+Function ProxyCheck(url)
+   Dim tstVal as String
+   Dim fullurl as String
+   tstVal = url
+   strt$ = inStr(tstVal, "ßu")
+   leng& = Len(tstVal)
+   stp1$ = MID(tstVal, cInt(strt$)+2, leng&)
+   'Check to see if there's another delimter after the URL.
+    IF (inStr(stp1$, "ß") = 0) THEN
+        'There is no other delimiter. All we have left is the URL.
+        fullurl = TRIM(stp1$)
+    ELSE
+        'There is a delimiter.
+        fullurl = TRIM(LEFT(stp1$, cInt(inStr(stp1$, "ß"))-1))
+    END IF
+   'fullurl is the full URL. That's what we return based on the result of this dialog box. But first we need to format it for the MsgBox 
+    '6 is the width of a full character. 12 is the height of any character. 3 lines of 15 characters would be 45 characters. 108
+    Dim msgURL1 as String
+    Dim msgURL2 as String
+    Dim msgURL3 as String
+    msgURL1 = mid(fullurl, 1, 35)
+    msgURL2 = mid(fullurl, 36, 70)
+    msgURL3 = mid(fullurl, 71, 105)
+    IF(len(fullurl)>90) THEN
+        msgURL3 = msgURL3 & "..."
+    END IF
+    
+    Begin Dialog YNBox 220, 100, "Proxy URL"
+        Text 4, 4, 100, 20, "Do you want to proxy the following URL"
+        Text 4, 24, 215, 10, msgURL1 
+        Text 4, 34, 215, 10, msgURL2 
+        Text 4, 44, 215, 10, msgURL3 
+        OKButton 90, 70, 25, 15
+        OptionGroup .ListYN
+            OptionButton 10, 60, 25, 12, "Yes"
+            OptionButton 40, 60, 25, 12, "No"
+    End Dialog           
+    Dim DialogBox AS YNBox
+    Dialog DialogBox
+    IF DialogBox.ListYN = 0 THEN
+        OutputValue = fullurl        
+    ELSE
+        OutputValue = "False"
+    END IF
+    ProxyCheck = OutputValue
+End Function
+
+'***Prompt Box Functions***'
 
 'Displays a dropdown and returns the result.
 Function DropdownBox(valueArray$(), title, qtext)
@@ -399,14 +696,25 @@ Function DropdownBox(valueArray$(), title, qtext)
    DropdownBox = valueArray(DialogBox.returnValue)
 End Function
 
+'Displays a Text Box and confirms that a result has been entered. No other validation. Will need to rebuild it so the cancel button is recognized.
+Function TextBox(qtext, title, optional defaultText)
+    Dim TextInput as String
+    TextInput = InputBox$(qtext, title, defaultText)
+    IF TextInput = "" THEN
+        MsgBox("Please put a value into the text box.")
+        TextInput = TextBox(qtext, title, defaultText)
+    END IF
+    TextBox = TextInput
+End Function
+
 'Displays a Yes/No box and returns True/False
 Function YNBox(title, qtext)
-    Begin Dialog YNBox 120, 50, title
+    Begin Dialog YNBox 120, 65, title
         Text 4, 4, 100, 40, qtext
         OKButton 90, 20, 25, 15
         OptionGroup .ListYN
-            OptionButton 10, 15, 25, 12, "Yes"
-            OptionButton 40, 15, 25, 12, "No"
+            OptionButton 10, 50, 25, 12, "Yes"
+            OptionButton 40, 50, 25, 12, "No"
     End Dialog           
     Dim DialogBox AS YNBox
     Dialog DialogBox
