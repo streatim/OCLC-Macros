@@ -1,18 +1,27 @@
 'MacroName:Integrate949
 'MacroDescription:Create an Integrated 949 Function.
-Declare Sub AllFormats()
 
+'Overarching Functions with customizable values
+Declare Sub AllFormats() 'user is set here.
+Declare Function MacroPick() 'Order of Macros in dropdown set here.
+'Macro Functions
 Declare Function Default949(user, callNum, formatType, formatCode)
+Declare Function Overlay949(user, callNum, formatType, formatCode)
+Declare Function Volume949(user, callNum, formatType, formatCode)
+Declare Function Multi949(user, callNum, formatType, formatCode)
+
+'Action Functions
 Declare Function GetBarcode()
+Declare Function GetVolume()
 Declare Function GetFormatCode(formatType, formatCode)
 Declare Function GetFormatInfo(jamesBond, marcType, marcBlvl, returnValue)
 Declare Function GetICode()
 Declare Function GetIStatus()
 Declare Function GetIType()
 Declare Function GetLocation(callNum)
-Declare Function getOverlayBNum()
-Declare Function MacroPick()
-Declare Function Overlay949(user, callNum, formatType, formatCode)
+Declare Function GetOverlayBNum()
+
+'Prompt Box Functions
 Declare Function DropdownBox(valueArray$(), title, qtext)
 Declare Function YNBox(title, qtext)
 
@@ -53,9 +62,21 @@ Sub Main
     Dim outputLine as String
     IF selectedMacro = "Default 949" THEN outputLine = Default949(user, callNum, formatType, formatCode)
     IF selectedMacro = "Overlay 949" THEN outputLine = Overlay949(user, callNum, formatType, formatCode)
-
+    IF selectedMacro = "Volumes 949" THEN outputLine = Volume949(user, callNum, formatType, formatCode)
+    IF selectedMacro = "Multi 949" THEN outputLine = Multi949(user, callNum, formatType, formatCode)
     CS.AddField 1, outputLine
 End Sub
+
+'List all Macros in a dropdown and return the selected result.
+Function MacroPick()
+    Dim MacroValues$(3)
+    MacroValues$(0) = "Default 949"
+    MacroValues$(1) = "Overlay 949"
+    MacroValues$(2) = "Volumes 949"
+    MacroValues$(3) = "Multi 949"
+
+    MacroPick = DropdownBox(MacroValues$(), "Select a Macro", "Select a Macro")
+End Function
 
 'Default 949 Process
 Function Default949(user, callNum, formatType, formatCode)
@@ -87,8 +108,6 @@ End Function
 Function Multi949(user, callNum, formatType, formatCode)
     Dim outputString as String
     'In this there are two items, with separate barcodes, locations, item types (but the same i2, b2, call number) Will confirm with Heidi what this is used for.
-    'Set up item 1
-
     Dim itemInfo$(2, 3)
     For i = 1 to 2
         msgBox("You will now insert information for Item #"&i)
@@ -113,7 +132,7 @@ Function Multi949(user, callNum, formatType, formatCode)
     'Create the output 949 string. 
     outputString = "949  *recs=b;ins=" & user & ";i=" & itemInfo$(1, 1) & "/sta=" & iStatus & "/loc=" & itemInfo$(1, 0) & "/ty=" & itemInfo$(1, 2) & "/cop=" & itemInfo$(1, 3) & "/i2=" & i2Code & "/b2=" & b2Code & ";i=" & itemInfo$(2, 1) & "/sta=" & iStatus & "/loc=" & itemInfo$(2, 0) & "/ty=" & itemInfo$(2, 2) & "/cop=" & itemInfo$(2, 3) & ";"
 
-    Default949 = outputString
+    Multi949 = outputString
 End Function
 
 'Overlay 949 Process
@@ -143,6 +162,40 @@ Function Overlay949(user, callNum, formatType, formatCode)
     'Create the output 949 string.
     outputString =  "949  *recs=b;bn=" & callLoc & ";ov=" & bNumValue & "ins=" & user & ";i=" & barcode & "/sta=" & iStatus & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
     Overlay949 = outputString
+End Function
+
+'Volume 949 Process
+Function Volume949(user, callNum, formatType, formatCode)
+    Dim outputString as String
+    'This applies different metadata for up to 4 volumes of a record.
+    'Get Format (b2) Code
+    Dim b2Code as String
+    b2Code = GetFormatCode(formatType, formatCode)
+    'Get ICode2 Value
+    Dim i2Code as String
+    i2Code = GetICode()
+    'Get iStatus Value
+    Dim iStatus as String
+    iStatus = GetIStatus()
+    Dim itemInfo$(4, 3)
+    For i = 1 to 4
+        msgBox("You will now insert information for Volume #"&i)
+        'Get Call number information and estimate location.
+        itemInfo(i, 0) = getLocation(callNum)
+        'Get Barcode
+        itemInfo(i, 1) = GetBarcode()
+        'Get IType
+        itemInfo(i, 2) = GetIType()
+        'Get Volume info
+        itemInfo(i, 3) = GetVolume()
+    Next i
+    'Create the output 949 string.
+    outputString = "949  *recs=b;bn=" & itemInfo(1, 0) & ";ins=" & user &";/i2=" & i2Code & "/b2=" & b2Code
+    For i = 1 to 4
+        outputString = outputString & "i=" & itemInfo(i, 1) & "/sta=" & iStatus & "/loc=" & itemInfo(i, 0) & "/ty=" & itemInfo(i, 2) & "/v=" & itemInfo(i, 3) & ";"
+    Next i
+
+    Volume949 = outputString
 End Function
 
 'Display a list of all format types
@@ -311,7 +364,7 @@ Function GetLocation(callNum)
 End Function
 
 'Prompts the user for an overlay bib number.
-Function getOverlayBNum()
+Function GetOverlayBNum()
     Dim overlayBib as String
     overlayBib = InputBox$("Enter a Bib record number to overlay. (.b is not necessary)", "Bib Overlay")
     If len(overlayBib) = 8 THEN overlayBib = ".b"&overlayBib
@@ -323,15 +376,15 @@ Function getOverlayBNum()
     getOverlayBNum = overlayBib
 End Function
 
-'List all Macros in a dropdown and return the selected result.
-Function MacroPick()
-    Dim MacroValues$(3)
-    MacroValues$(0) = "Default 949"
-    MacroValues$(1) = "Overlay 949"
-    MacroValues$(2) = "Volumes 949"
-    MacroValues$(3) = "Multi 949"
-
-    MacroPick = DropdownBox(MacroValues$(), "Select a Macro", "Select a Macro")
+'Prompts the user for a volume.
+Function GetVolume()
+    Dim VolumeInput as String
+    VolumeInput = InputBox$("Enter Volume:", "Volume")
+    IF VolumeInput = "" THEN
+        msgBox("Input an Volume Number.")
+        VolumeInput = GetIType()
+    End If
+    GetVolume = VolumeInput
 End Function
 
 'Displays a dropdown and returns the result.
