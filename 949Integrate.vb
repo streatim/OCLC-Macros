@@ -16,8 +16,6 @@ Declare Function Overlay949(user, callNum, formatType, formatCode)
 Declare Function DropdownBox(valueArray$(), title, qtext)
 Declare Function YNBox(title, qtext)
 
-
-
 'Main Function. Sets username variable and handles anything that requires writing or reading the record.
 Sub Main
     'Set the initials used in the 949 Field.
@@ -81,7 +79,40 @@ Function Default949(user, callNum, formatType, formatCode)
     Dim iStatus as String
     iStatus = GetIStatus()
     'Create the output 949 string.
-    outputString = "949  *recs=b;bn=" & callLoc & ";ins=" & user & ";i=" & barcode & "/sta=" & istat & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
+    outputString = "949  *recs=b;bn=" & callLoc & ";ins=" & user & ";i=" & barcode & "/sta=" & iStatus & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
+    Default949 = outputString
+End Function
+
+'Multiple 949 Process
+Function Multi949(user, callNum, formatType, formatCode)
+    Dim outputString as String
+    'In this there are two items, with separate barcodes, locations, item types (but the same i2, b2, call number) Will confirm with Heidi what this is used for.
+    'Set up item 1
+
+    Dim itemInfo$(2, 3)
+    For i = 1 to 2
+        msgBox("You will now insert information for Item #"&i)
+        'Get Call number information and estimate location.
+        itemInfo$(i, 0) = getLocation(callNum)
+        'Get Barcode
+        itemInfo$(i, 1) = getBarcode()
+        'Get IType
+        itemInfo$(i, 2) = getIType()
+        'Get Copy Information
+        itemInfo$(i, 3) = GetCopyInfo
+    Next i
+    'Get Format (b2) Code
+    Dim b2Code as String
+    b2Code = GetFormatCode(formatType, formatCode)
+    'Get ICode2 Value
+    Dim i2Code as String
+    i2Code = GetICode()
+    'Get iStatus Value
+    Dim iStatus as String
+    iStatus = GetIStatus()
+    'Create the output 949 string. 
+    outputString = "949  *recs=b;ins=" & user & ";i=" & itemInfo$(1, 1) & "/sta=" & iStatus & "/loc=" & itemInfo$(1, 0) & "/ty=" & itemInfo$(1, 2) & "/cop=" & itemInfo$(1, 3) & "/i2=" & i2Code & "/b2=" & b2Code & ";i=" & itemInfo$(2, 1) & "/sta=" & iStatus & "/loc=" & itemInfo$(2, 0) & "/ty=" & itemInfo$(2, 2) & "/cop=" & itemInfo$(2, 3) & ";"
+
     Default949 = outputString
 End Function
 
@@ -110,7 +141,7 @@ Function Overlay949(user, callNum, formatType, formatCode)
     Dim iStatus as String
     iStatus = GetIStatus()
     'Create the output 949 string.
-    outputString =  "949  *recs=b;bn=" & callLoc & ";ov=" & bNumValue & "ins=" & user & ";i=" & barcode & "/sta=" & istat & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
+    outputString =  "949  *recs=b;bn=" & callLoc & ";ov=" & bNumValue & "ins=" & user & ";i=" & barcode & "/sta=" & iStatus & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
     Overlay949 = outputString
 End Function
 
@@ -143,6 +174,7 @@ Sub AllFormats()
     msgbox(formatList)
 End Sub
 
+'Prompts the user to provide a barcode.
 Function GetBarcode()
     Dim barcodeNum as String
     barcodeNum = InputBox$("Scan Barcode:", "Barcode")
@@ -151,6 +183,13 @@ Function GetBarcode()
         barcodeNum = GetBarcode()
     END IF 
     GetBarcode = barcodeNum
+End Function
+
+'Prompts the user to provide copy information.
+Function GetCopyInfo()
+    Dim copyInput as String
+    copyInput = InputBox$("Copy:", "Copy Information")
+    GetCopyInfo = copyInput
 End Function
 
 'Prompt User for Format Code using default values.
@@ -252,6 +291,7 @@ Function GetIType()
     GetIType = iTypeInput
 End Function
 
+'Prompts the user to confirm the location. Defaults to c3rd or c4th based on the call number.
 Function GetLocation(callNum)
     dim callLocation as String 
     dim callDefault as String
@@ -270,8 +310,17 @@ Function GetLocation(callNum)
     getLocation = callLocation
 End Function
 
+'Prompts the user for an overlay bib number.
 Function getOverlayBNum()
-
+    Dim overlayBib as String
+    overlayBib = InputBox$("Enter a Bib record number to overlay. (.b is not necessary)", "Bib Overlay")
+    If len(overlayBib) = 8 THEN overlayBib = ".b"&overlayBib
+    IF len(overlayBib) = 9 AND Left(overlayBib, 1) = "b" THEN overlayBib = "."&overlayBib
+    IF len(overlayBib) <> 10 THEN
+        msgBox("Please enter a valid bib record number")
+        overlayBib = getOverlayBNum()
+    END IF
+    getOverlayBNum = overlayBib
 End Function
 
 'List all Macros in a dropdown and return the selected result.
