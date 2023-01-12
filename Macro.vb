@@ -191,7 +191,7 @@ Function Overlay949(user, callNum, formatType, formatCode)
     Dim iStatus as String
     iStatus = GetIStatus()
     'Create the output 949 string.
-    outputString =  "949  *recs=b;bn=" & callLoc & ";ov=" & bNumValue & "ins=" & user & ";i=" & barcode & "/sta=" & iStatus & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
+    outputString =  "949  *recs=b;bn=" & callLoc & ";ov=" & bNumValue & ";ins=" & user & ";i=" & barcode & "/sta=" & iStatus & "/loc=" & callLoc & "/ty=" & iTypeCode & "/i2=" & i2Code & "/b2=" & b2Code & ";"
     Overlay949 = outputString
 End Function
 
