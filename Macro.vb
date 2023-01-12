@@ -1,5 +1,6 @@
-'MacroName:Integrate949
-'MacroDescription:Create an Integrated 949 Function.
+'MacroName:Macro
+'MacroDescription:Overarching Macro for the Mardigian Library. Contains Integrated Resource and 949 Macros at present.
+'MacroDescription:A breakdown of specific macros can be found https://github.com/streatim/OCLC-Macros
 
 'Overarching Functions with customizable values
 Declare Function MacroPick() 'Order of Macros in dropdown set here.
